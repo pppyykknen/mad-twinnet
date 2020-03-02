@@ -9,7 +9,7 @@ from modules._fnn_denoiser import FNNDenoiser
 
 __author__ = 'Konstantinos Drossos -- Tampere University'
 __docformat__ = 'reStructuredText'
-__all__ = ['MaD']
+__all__ = ['MaD',  'MaDConv']
 
 
 class MaD(Module):
@@ -66,7 +66,7 @@ class MaDConv(Module):
 
     def __init__(self, cnn_channels, inner_kernel_size, inner_padding,
                  cnn_dropout, rnn_dec_input_dim,
-                 context_length, original_input_dim):
+                 context_length, original_input_dim, latent_n=3):
         super(MaDConv, self).__init__()
 
         self.masker = MaskerCNN(
@@ -75,6 +75,7 @@ class MaDConv(Module):
             rnn_dec_input_dim=rnn_dec_input_dim,
             context_length=context_length,
             original_input_dim=original_input_dim
+            latent_n=latent_n
         )
 
         self.denoiser = FNNDenoiser(

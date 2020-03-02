@@ -158,7 +158,7 @@ def training_process():
     """
     # Check what device we'll be using
     device = 'cuda' if not debug and cuda.is_available() else 'cpu'
-    device = 'cpu'
+    #device = 'cpu'
     # Inform about the device and time and date
     printing.print_intro_messages(device)
     printing.print_msg('Starting training process. Debug mode: {}'.format(debug))
@@ -172,7 +172,8 @@ def training_process():
             cnn_dropout=0.1,
             rnn_dec_input_dim=hyper_parameters['rnn_enc_output_dim'],
             original_input_dim=hyper_parameters['original_input_dim'],
-            context_length=hyper_parameters['context_length']
+            context_length=hyper_parameters['context_length'],
+            latent_n=hyper_parameters['latent_n']
         ).to(device)
 
     # Get the optimizer

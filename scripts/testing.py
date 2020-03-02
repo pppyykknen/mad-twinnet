@@ -10,7 +10,7 @@ from functools import partial
 import numpy as np
 from torch import cuda, load, from_numpy, no_grad
 
-from modules import MaD
+from modules.mad import MaDConv
 from helpers import printing, data_feeder
 from helpers.settings import debug, hyper_parameters,\
     output_states_path, training_constants, \
@@ -68,7 +68,7 @@ def _testing_process(data, index, mad, device, seq_length,
             mix_magnitude[b_start:b_end, :, :]).to(device)
 
         voice_predicted[b_start:b_end, :, :] = mad(
-            v_in).v_j_filt.cpu().numpy()
+            v_in.unsqueeze(1)).v_j_filt.cpu().numpy()
 
     tmp_sdr, tmp_sir = data_feeder.data_process_results_testing(
         index=index, voice_true=voice_true,
@@ -103,12 +103,20 @@ def testing_process():
 
     # Set up MaD TwinNet
     with printing.InformAboutProcess('Setting up MaD TwinNet'):
-        mad = MaD(
-            rnn_enc_input_dim=hyper_parameters['reduced_dim'],
+        #mad = MaD(
+        #   rnn_enc_input_dim=hyper_parameters['reduced_dim'],
+        #   rnn_dec_input_dim=hyper_parameters['rnn_enc_output_dim'],
+        #    original_input_dim=hyper_parameters['original_input_dim'],
+        #    context_length=hyper_parameters['context_length'])
+        mad = MaDConv(
+            cnn_channels=64,
+            inner_kernel_size=3,
+            inner_padding=1,
+            cnn_dropout=0.1,
             rnn_dec_input_dim=hyper_parameters['rnn_enc_output_dim'],
             original_input_dim=hyper_parameters['original_input_dim'],
-            context_length=hyper_parameters['context_length'])
-
+            context_length=hyper_parameters['context_length']
+        )
     with printing.InformAboutProcess('Loading states'):
         mad.load_state_dict(load(output_states_path['mad']))
         mad = mad.to(device).eval()

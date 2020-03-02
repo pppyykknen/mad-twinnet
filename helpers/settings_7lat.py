@@ -70,7 +70,7 @@ metrics_paths = {
 }
 
 output_states_path = {
-    'mad': os.path.join(_states_path, 'mad{}.pt'.format(_debug_suffix))
+    'mad': os.path.join(_states_path, 'mad7{}.pt'.format(_debug_suffix))
 }
 
 # Strings
@@ -113,7 +113,8 @@ hyper_parameters = {
     'max_grad_norm': .5,
     'lambda_l_twin': .5,
     'lambda_1': 1e-2,
-    'lambda_2': 1e-4
+    'lambda_2': 1e-4,
+    'latent_n': 7
 }
 hyper_parameters.update({
     'rnn_enc_output_dim': 2 * hyper_parameters['reduced_dim']

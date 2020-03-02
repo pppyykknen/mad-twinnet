@@ -13,7 +13,7 @@ __docformat__ = 'reStructuredText'
 
 
 class CNNEnc(Module):
-    def __init__(self, cnn_channels, inner_kernel_size, inner_padding, cnn_dropout):
+    def __init__(self, cnn_channels, inner_kernel_size, inner_padding, cnn_dropout, pool_size=5):
         """The CNN encoder of the Masker.
 
         :param input_dim: The input dimensionality.
@@ -31,7 +31,7 @@ class CNNEnc(Module):
                 inner_padding=inner_padding),
             ReLU(),
             BatchNorm2d(cnn_channels),
-            MaxPool2d(kernel_size=(1, 5), stride=(1, 5)),
+            MaxPool2d(kernel_size=(1, pool_size), stride=(1, pool_size)),
             Dropout2d(cnn_dropout))
 
 

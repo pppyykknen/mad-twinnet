@@ -14,7 +14,7 @@ __docformat__ = 'reStructuredText'
 
 
 class CNNDec(Module):
-    def __init__(self, cnn_channels, inner_kernel_size, inner_padding,cnn_dropout):
+    def __init__(self, cnn_channels, inner_kernel_size, inner_padding,cnn_dropout, pool_size=5):
         """The CNN dec of the Masker.
 
         :param cnn_channels, amount of channels in the depthwise conv block
@@ -32,7 +32,7 @@ class CNNDec(Module):
                 inner_padding=inner_padding),
             ReLU(),
             BatchNorm2d(cnn_channels),
-            MaxPool2d(kernel_size=(1, 5), stride=(1, 5)),
+            MaxPool2d(kernel_size=(1, pool_size), stride=(1, pool_size)),
             Dropout2d(cnn_dropout))
 
     def forward(self, x):
