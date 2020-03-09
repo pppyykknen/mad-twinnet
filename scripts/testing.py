@@ -100,7 +100,12 @@ def testing_process():
     printing.print_intro_messages(device)
     printing.print_msg('Starting training process. '
                        'Debug mode: {}'.format(debug))
+    latent_n = 7
 
+
+    pt_path = "./outputs/states/mad" + str(latent_n) + ".pt" + str(latent_n)
+    print("USING " + str(latent_n) + " conv layers between enc/dec")
+    print("Weights path: " + pt_path)
     # Set up MaD TwinNet
     with printing.InformAboutProcess('Setting up MaD TwinNet'):
         #mad = MaD(
@@ -115,10 +120,11 @@ def testing_process():
             cnn_dropout=0.1,
             rnn_dec_input_dim=hyper_parameters['rnn_enc_output_dim'],
             original_input_dim=hyper_parameters['original_input_dim'],
-            context_length=hyper_parameters['context_length']
+            context_length=hyper_parameters['context_length'],
+            latent_n=latent_n
         )
     with printing.InformAboutProcess('Loading states'):
-        mad.load_state_dict(load(output_states_path['mad']))
+        mad.load_state_dict(load(pt_path))
         mad = mad.to(device).eval()
 
     with printing.InformAboutProcess('Initializing data feeder'):

@@ -22,7 +22,7 @@ class MaDTwinNet_conv(Module):
     def __init__(self,cnn_channels, inner_kernel_size, inner_padding,
                  cnn_dropout, 
                  rnn_dec_input_dim,
-                 original_input_dim, context_length):
+                 original_input_dim, context_length, latent_n=3):
         """The MaD TwinNet as a module.
 
         This class implements the MaD TwinNet as a module\
@@ -50,18 +50,19 @@ class MaDTwinNet_conv(Module):
             cnn_dropout=cnn_dropout,
             rnn_dec_input_dim=rnn_dec_input_dim,
             context_length=context_length,
-            original_input_dim=original_input_dim
-        )
-
-        self.twin_net = TwinNet(
-            rnn_dec_input_dim=rnn_dec_input_dim,
             original_input_dim=original_input_dim,
-            context_length=context_length
+            latent_n=latent_n
         )
 
-        self.affine = AffineTransform(
-            input_dim=rnn_dec_input_dim
-        )
+        # self.twin_net = TwinNet(
+        #     rnn_dec_input_dim=rnn_dec_input_dim,
+        #     original_input_dim=original_input_dim,
+        #     context_length=context_length
+        # )
+        #
+        # self.affine = AffineTransform(
+        #     input_dim=rnn_dec_input_dim
+        # )
 
         self.output = namedtuple(
             'mad_twin_net_output',

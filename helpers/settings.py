@@ -93,9 +93,9 @@ usage_output_string_total = '-- All files processed. Total time: {t:6.2f} sec(s)
 
 # Process constants
 training_constants = {
-    'epochs': 2 if debug else 100,
+    'epochs': 1 if debug else 1,
     'batch_size': 16,
-    'files_per_pass': 4
+    'files_per_pass': 1
 }
 
 wav_quality = {'sampling_rate': 44100, 'nb_bits': 16}
@@ -113,7 +113,8 @@ hyper_parameters = {
     'max_grad_norm': .5,
     'lambda_l_twin': .5,
     'lambda_1': 1e-2,
-    'lambda_2': 1e-4
+    'lambda_2': 1e-4,
+    'latent_n': 3
 }
 hyper_parameters.update({
     'rnn_enc_output_dim': 2 * hyper_parameters['reduced_dim']

@@ -9,7 +9,7 @@ from functools import partial
 
 from torch import cuda, from_numpy
 from torch import optim, nn, save
-
+import torch
 from helpers import data_feeder, printing
 from helpers.settings import debug, hyper_parameters, training_constants, \
     training_output_string, output_states_path
@@ -19,11 +19,14 @@ from objectives import kullback_leibler as kl, l2_loss, sparsity_penalty, l2_reg
 __author__ = ['Konstantinos Drossos -- TAU', 'Stylianos Mimilakis -- Fraunhofer IDMT']
 __docformat__ = 'reStructuredText'
 __all__ = ['training_process']
-
+# import cProfile, pstats
+# from io import StringIO
+# pr = cProfile.Profile()
+# pr.enable()
 
 def _one_epoch(module, epoch_it, solver, separation_loss, twin_reg_loss,
                reg_fnn_masker, reg_fnn_dec, device, epoch_index, lambda_l_twin,
-               lambda_1, lambda_2, max_grad_norm):
+               lambda_1, lambda_2, max_grad_norm, lats):
     """One training epoch for MaD TwinNet.
 
     :param module: The module of MaD TwinNet.
@@ -143,6 +146,9 @@ def _one_epoch(module, epoch_it, solver, separation_loss, twin_reg_loss,
     # Log ending time
     time_end = time.time()
     # Print to stdout
+    if epoch_index % 10 == 0 and epoch_index > 1:
+        save(module.mad.state_dict(), output_states_path['mad'] + str(lats) + str(epoch_index) )
+
     printing.print_msg(training_output_string.format(
         ep=epoch_index,
         t=time_end - time_start,
@@ -162,7 +168,7 @@ def training_process():
     # Inform about the device and time and date
     printing.print_intro_messages(device)
     printing.print_msg('Starting training process. Debug mode: {}'.format(debug))
-
+    torch.backends.cudnn.benchmark = True
     # Set up MaD TwinNet
     with printing.InformAboutProcess('Setting up MaD TwinNet'):
         mad_twin_net = MaDTwinNet_conv(
@@ -195,7 +201,8 @@ def training_process():
             files_per_pass=training_constants['files_per_pass'],
             debug=debug
         )
-
+    lats = hyper_parameters['latent_n']
+    print("Using " + str(lats) + " latent layers between encoder and decoder.", flush=True)
     # Inform about the future
     printing.print_msg('Training starts', end='\n\n')
 
@@ -209,18 +216,24 @@ def training_process():
         lambda_l_twin=hyper_parameters['lambda_l_twin'],
         lambda_1=hyper_parameters['lambda_1'],
         lambda_2=hyper_parameters['lambda_2'],
-        max_grad_norm=hyper_parameters['max_grad_norm']
+        max_grad_norm=hyper_parameters['max_grad_norm'],
+        lats=lats
     )
 
     # Training
     [one_epoch(epoch_index=e) for e in range(training_constants['epochs'])]
-
-    # Inform about the past
+    # pr.disable()
+    # s = StringIO.StringIO()
+    # sortby = 'cumulative'
+    # ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+    # ps.print_stats()
+    # print(s.getvalue())
+    # # Inform about the past
     printing.print_msg('Training done.', start='\n-- ')
 
     # Save the model
     with printing.InformAboutProcess('Saving model'):
-        save(mad_twin_net.mad.state_dict(), output_states_path['mad'])
+        save(mad_twin_net.mad.state_dict(), output_states_path['mad'] + str(lats) )
 
     # Say goodbye!
     printing.print_msg('That\'s all folks!')

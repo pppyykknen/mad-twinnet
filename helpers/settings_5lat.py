@@ -95,7 +95,7 @@ usage_output_string_total = '-- All files processed. Total time: {t:6.2f} sec(s)
 training_constants = {
     'epochs': 2 if debug else 100,
     'batch_size': 16,
-    'files_per_pass': 4
+    'files_per_pass': 10
 }
 
 wav_quality = {'sampling_rate': 44100, 'nb_bits': 16}

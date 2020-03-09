@@ -355,6 +355,11 @@ def _get_data_training(current_set, set_size, mixtures_list, sources_list,
         if index == 0:
             ms_train = ms_seg
             vs_train = vs_seg
+
+            # ms_train = np.zeros((len(m_list), ms_.size()))
+            #
+            # vs_train = np.zeros((len(m_list),vs_seg.size()))
+            #
         else:
             ms_train = np.vstack((ms_train, ms_seg))
             vs_train = np.vstack((vs_train, vs_seg))

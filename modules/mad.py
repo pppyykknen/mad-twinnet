@@ -74,7 +74,7 @@ class MaDConv(Module):
             inner_padding=inner_padding, cnn_dropout=cnn_dropout,
             rnn_dec_input_dim=rnn_dec_input_dim,
             context_length=context_length,
-            original_input_dim=original_input_dim
+            original_input_dim=original_input_dim,
             latent_n=latent_n
         )
 
