@@ -29,7 +29,7 @@ parser = argparse.ArgumentParser(description='Train CNN madtwin')
 parser.add_argument('--layers', dest='layers',
                     help='amount of latent layers',
                     default=1, type=int)
-parser.add_argument('--feats', dest='feats',
+parser.add_argument('--channels', dest='channels',
                     help='Amount of conv features',
                     default=64, type=int)
 
@@ -127,23 +127,23 @@ def testing_process():
     latent_n =args.layers
     lats = args.layers
     do = args.do
-    feats = args.feats
+    channels = args.channels
 
     print("Using " + str(lats) + " latent layers between encoder and decoder.", flush=True)
-    print("Using " + str(args.feats) + " cnn channels.", flush=True)
+    print("Using " + str(args.channels) + " cnn channels.", flush=True)
     print("Using " + str(args.do/100) + " dropout.", flush=True)
     print(("Using residual connections" if args.residual else "Not using residual connections"))
 
-    outputPath = str(lats)+str(args.feats)+str(args.do)+("res" if args.residual else "")+ _dataset_parent_dir[7:]
+    outputPath = str(lats)+str(args.channels)+str(args.do)+("res" if args.residual else "")+ _dataset_parent_dir[7:]
     print("Output path: " + outputPath)
-    pt_path = ("./outputs/states/" + str(lats) + str(args.feats)+str(int(args.do))+("res" if args.residual else "")+".pt"+ _dataset_parent_dir[7:])
+    pt_path = ("./outputs/states/" + str(lats) + str(args.channels)+str(int(args.do))+("res" if args.residual else "")+".pt"+ _dataset_parent_dir[7:])
     # print("USING " + str(latent_n) + " conv layers between enc/dec")
     print("Weights path: " + pt_path, flush=True)
     # Set up MaD TwinNet
     with printing.InformAboutProcess('Setting up MaD TwinNet'):
 
         mad = MaDConv(
-            cnn_channels=args.feats,
+            cnn_channels=args.channels,
             inner_kernel_size=1,
             inner_padding=0,
             cnn_dropout=do/100,
@@ -194,7 +194,7 @@ def testing_process():
         with open(metrics_paths['sir'], 'wb') as f:
             pickle.dump(sir, f, protocol=2)
     print("Using " + str(lats) + " latent layers between encoder and decoder.", flush=True)
-    print("Using " + str(args.feats) + " cnn channels.", flush=True)
+    print("Using " + str(args.channels) + " cnn channels.", flush=True)
     print("Using " + str(args.do / 100) + " dropout.", flush=True)
 
 
