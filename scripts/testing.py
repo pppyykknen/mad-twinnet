@@ -136,7 +136,7 @@ def testing_process():
 
     outputPath = str(lats)+str(args.feats)+str(args.do)+("res" if args.residual else "")+ _dataset_parent_dir[7:]
     print("Output path: " + outputPath)
-    pt_path = ("./outputs/states/bestones/" + str(lats) + str(args.feats)+str(int(args.do))+("res" if args.residual else "")+".pt"+ _dataset_parent_dir[7:])
+    pt_path = ("./outputs/states/" + str(lats) + str(args.feats)+str(int(args.do))+("res" if args.residual else "")+".pt"+ _dataset_parent_dir[7:])
     # print("USING " + str(latent_n) + " conv layers between enc/dec")
     print("Weights path: " + pt_path, flush=True)
     # Set up MaD TwinNet
@@ -170,7 +170,7 @@ def testing_process():
         seq_length=hyper_parameters['seq_length'],
         context_length=hyper_parameters['context_length'],
         window_size=hyper_parameters['window_size'],
-        batch_size=training_constants['batch_size'],
+        batch_size=4,#training_constants['batch_size'],
         hop_size=hyper_parameters['hop_size'], outputPath=outputPath)
 
     printing.print_msg('Testing starts', end='\n\n')

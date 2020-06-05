@@ -35,7 +35,7 @@ parser.add_argument('--do', dest='do',
                     default=10, type=float)
 parser.add_argument('--residual', dest='residual',
                     help='Use residuals in latent layers or no',
-                    action='store_true', default=False)
+                    action='store_true', default=True)
 
 args = parser.parse_args()
 
@@ -229,8 +229,7 @@ def training_process():
 
     # Save the model
     with printing.InformAboutProcess('Saving model'):
-        save(mad_twin_net.mad.state_dict(), output_states_path['mad'] + str(lats) \
-             + "latents" + str(args.channels)+"features"+str(args.do/100)+"dropout" + ("res" if args.residual else "") + _dataset_parent_dir[7:])
+        save(mad_twin_net.mad.state_dict(),"./outputs/states/" + str(lats) + str(args.feats)+str(int(args.do))+("res" if args.residual else "")+".pt"+ _dataset_parent_dir[7:])
 
     # Say goodbye!
     printing.print_msg('That\'s all folks!')
