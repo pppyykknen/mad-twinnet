@@ -1,3 +1,4 @@
+0. Clone this repository, download DSD100 from https://sigsep.github.io/datasets/dsd100.html and extract it to the dataset folder
 1. Add pytorch channel to conda with conda config --append channels pytorch
 2. create virtual conda enviroment from the conda-requirements.txt
 3. install required pip packages with pip install from pip-requirements.txt
