@@ -26,7 +26,7 @@ parser = argparse.ArgumentParser(description='Train CNN madtwin')
 parser.add_argument('--layers', dest='layers',
                     help='amount of layers between encoder and decoder',
                     default=5, type=int)
-parser.add_argument('--feats', dest='feats',
+parser.add_argument('--channels', dest='channels',
                     help='Amount of CNN channels',
                     default=64, type=int)
 
@@ -122,7 +122,7 @@ def _one_epoch(module, epoch_it, solver, separation_loss,epoch_index, device, ma
     # Print to stdout
     if epoch_index % 10 == 0 and epoch_index > 1:
         # save model every 10 epochs
-        save(module.mad.state_dict(), output_states_path['mad'] + str(lats) +  "latents" + str(args.feats)
+        save(module.mad.state_dict(), output_states_path['mad'] + str(lats) +  "latents" + str(args.channels)
              +"features"+str(args.do/100) + "dropout" + ("res" if args.residual else "") + str(epoch_index) + "epochs" + _dataset_parent_dir[7:])
         # print("Validation time!")
         # for _data in valid_it():
@@ -167,7 +167,7 @@ def training_process():
     # Set up MaD TwinNet
     with printing.InformAboutProcess('Setting up MaD TwinNet'):
         mad_twin_net = MaDTwinNet_conv(
-            cnn_channels=args.feats,
+            cnn_channels=args.channels,
             inner_kernel_size=1,
             inner_padding=0,
             cnn_dropout=args.do/100,
@@ -206,7 +206,7 @@ def training_process():
         #     batch_size=1,files_per_pass=2, debug=debug, valid=True)
     lats = args.layers
     print("Using " + str(lats) + " latent layers between encoder and decoder.", flush=True)
-    print("Using " + str(args.feats) + " cnn channels.", flush=True)
+    print("Using " + str(args.channels) + " cnn channels.", flush=True)
     print("Using " + str(args.do/100) + " dropout.", flush=True)
     print("Using dataset from folder: " + str(_dataset_parent_dir))
     print(("Using residual connections" if args.residual else "Not using residual connections"))
@@ -230,7 +230,7 @@ def training_process():
     # Save the model
     with printing.InformAboutProcess('Saving model'):
         save(mad_twin_net.mad.state_dict(), output_states_path['mad'] + str(lats) \
-             + "latents" + str(args.feats)+"features"+str(args.do/100)+"dropout" + ("res" if args.residual else "") + _dataset_parent_dir[7:])
+             + "latents" + str(args.channels)+"features"+str(args.do/100)+"dropout" + ("res" if args.residual else "") + _dataset_parent_dir[7:])
 
     # Say goodbye!
     printing.print_msg('That\'s all folks!')
