@@ -6,7 +6,7 @@
 import pickle
 import time
 from functools import partial
-
+import torch
 import numpy as np
 from torch import cuda, load, from_numpy, no_grad
 
@@ -15,17 +15,38 @@ from helpers import printing, data_feeder
 from helpers.settings import debug, hyper_parameters,\
     output_states_path, training_constants, \
     testing_output_string_per_example,\
-    metrics_paths, testing_output_string_all
+    metrics_paths, testing_output_string_all, _dataset_parent_dir
+import argparse
+from pathlib import Path
 
 __author__ = 'Konstantinos Drossos -- TAU, Stylianos Mimilakis -- Fraunhofer IDMT'
 __docformat__ = 'reStructuredText'
 __all__ = ['testing_process']
 
 
+parser = argparse.ArgumentParser(description='Train CNN madtwin')
+
+parser.add_argument('--layers', dest='layers',
+                    help='amount of latent layers',
+                    default=1, type=int)
+parser.add_argument('--feats', dest='feats',
+                    help='Amount of conv features',
+                    default=64, type=int)
+
+parser.add_argument('--do', dest='do',
+                    help='dropout',
+                    default=10, type=float)
+parser.add_argument('--residual', dest='residual',
+                    help='Use residuals in latent layers or no',
+                    action='store_true', default=False)
+
+args = parser.parse_args()
+
+
 @no_grad()
 def _testing_process(data, index, mad, device, seq_length,
                      context_length, window_size, batch_size,
-                     hop_size):
+                     hop_size, outputPath):
     """The testing process over testing data.
 
     :param data: The testing data.
@@ -70,13 +91,14 @@ def _testing_process(data, index, mad, device, seq_length,
         voice_predicted[b_start:b_end, :, :] = mad(
             v_in.unsqueeze(1)).v_j_filt.cpu().numpy()
 
-    tmp_sdr, tmp_sir = data_feeder.data_process_results_testing(
+    tmp_sdr, tmp_sir, tmp_sar = data_feeder.data_process_results_testing(
         index=index, voice_true=voice_true,
         bg_true=bg_true, voice_predicted=voice_predicted,
         window_size=window_size, mix=mix,
         mix_magnitude=mix_magnitude,
-        mix_phase=mix_phase, hop=hop_size,
-        context_length=context_length)
+        mix_phase=mix_phase, hop=hop_size, 
+
+        context_length=context_length, outputPath=outputPath)
 
     time_elapsed = time.time() - s_time
 
@@ -84,10 +106,12 @@ def _testing_process(data, index, mad, device, seq_length,
         e=index,
         sdr=np.median([i for i in tmp_sdr[0] if not np.isnan(i)]),
         sir=np.median([i for i in tmp_sir[0] if not np.isnan(i)]),
+        sar=np.median([i for i in tmp_sar[0] if not np.isnan(i)]),
+
         t=time_elapsed
     ))
 
-    return tmp_sdr, tmp_sir, time_elapsed
+    return tmp_sdr, tmp_sir,tmp_sar, time_elapsed
 
 
 def testing_process():
@@ -95,33 +119,38 @@ def testing_process():
     """
     # Check what device we'll be using
     device = 'cuda' if not debug and cuda.is_available() else 'cpu'
-
+    torch.backends.cudnn.benchmark = True
     # Inform about the device and time and date
     printing.print_intro_messages(device)
     printing.print_msg('Starting training process. '
                        'Debug mode: {}'.format(debug))
-    latent_n = 7
+    latent_n =args.layers
+    lats = args.layers
+    do = args.do
+    feats = args.feats
 
+    print("Using " + str(lats) + " latent layers between encoder and decoder.", flush=True)
+    print("Using " + str(args.feats) + " cnn channels.", flush=True)
+    print("Using " + str(args.do/100) + " dropout.", flush=True)
+    print(("Using residual connections" if args.residual else "Not using residual connections"))
 
-    pt_path = "./outputs/states/mad" + str(latent_n) + ".pt" + str(latent_n)
-    print("USING " + str(latent_n) + " conv layers between enc/dec")
-    print("Weights path: " + pt_path)
+    outputPath = str(lats)+str(args.feats)+str(args.do)+("res" if args.residual else "")+ _dataset_parent_dir[7:]
+    print("Output path: " + outputPath)
+    pt_path = ("./outputs/states/bestones/" + str(lats) + str(args.feats)+str(int(args.do))+("res" if args.residual else "")+".pt"+ _dataset_parent_dir[7:])
+    # print("USING " + str(latent_n) + " conv layers between enc/dec")
+    print("Weights path: " + pt_path, flush=True)
     # Set up MaD TwinNet
     with printing.InformAboutProcess('Setting up MaD TwinNet'):
-        #mad = MaD(
-        #   rnn_enc_input_dim=hyper_parameters['reduced_dim'],
-        #   rnn_dec_input_dim=hyper_parameters['rnn_enc_output_dim'],
-        #    original_input_dim=hyper_parameters['original_input_dim'],
-        #    context_length=hyper_parameters['context_length'])
+
         mad = MaDConv(
-            cnn_channels=64,
-            inner_kernel_size=3,
-            inner_padding=1,
-            cnn_dropout=0.1,
-            rnn_dec_input_dim=hyper_parameters['rnn_enc_output_dim'],
+            cnn_channels=args.feats,
+            inner_kernel_size=1,
+            inner_padding=0,
+            cnn_dropout=do/100,
             original_input_dim=hyper_parameters['original_input_dim'],
             context_length=hyper_parameters['context_length'],
-            latent_n=latent_n
+            latent_n=latent_n,
+            residual=args.residual
         )
     with printing.InformAboutProcess('Loading states'):
         mad.load_state_dict(load(pt_path))
@@ -142,11 +171,11 @@ def testing_process():
         context_length=hyper_parameters['context_length'],
         window_size=hyper_parameters['window_size'],
         batch_size=training_constants['batch_size'],
-        hop_size=hyper_parameters['hop_size'])
+        hop_size=hyper_parameters['hop_size'], outputPath=outputPath)
 
     printing.print_msg('Testing starts', end='\n\n')
 
-    sdr, sir, total_time = [e for e in zip(*[
+    sdr, sir, sar, total_time = [e for e in zip(*[
         i for index, data in enumerate(testing_it())
         for i in [p_testing(data, index)]])]
 
@@ -156,6 +185,7 @@ def testing_process():
     printing.print_msg(testing_output_string_all.format(
         sdr=np.median([ii for i in sdr for ii in i[0] if not np.isnan(ii)]),
         sir=np.median([ii for i in sir for ii in i[0] if not np.isnan(ii)]),
+        sar=np.median([ii for i in sar for ii in i[0] if not np.isnan(ii)]),
         t=total_time), end='\n\n')
 
     with printing.InformAboutProcess('Saving results... '):
@@ -163,6 +193,10 @@ def testing_process():
             pickle.dump(sdr, f, protocol=2)
         with open(metrics_paths['sir'], 'wb') as f:
             pickle.dump(sir, f, protocol=2)
+    print("Using " + str(lats) + " latent layers between encoder and decoder.", flush=True)
+    print("Using " + str(args.feats) + " cnn channels.", flush=True)
+    print("Using " + str(args.do / 100) + " dropout.", flush=True)
+
 
     printing.print_msg('That\'s all folks!')
 

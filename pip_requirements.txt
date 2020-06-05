@@ -1,0 +1,8 @@
+pandas
+ffmpeg-python
+mir-eval
+musdb
+museval
+pycparser
+torchsummary
+

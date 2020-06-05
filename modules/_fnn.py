@@ -47,7 +47,7 @@ class FNNMasker(Module):
     def forward(self, h_j_dec, v_in):
         """Forward pass.
 
-        :param h_j_dec: The output from the RNN decoder.
+        :param h_j_dec: The output from the CNN decoder.
         :type h_j_dec: torch.Tensor
         :param v_in: The original magnitude spectrogram input.
         :type v_in: torch.Tensor
@@ -56,8 +56,6 @@ class FNNMasker(Module):
         """
         v_in_prime = v_in[:, self._context_length:-self._context_length, :]
         m_j = relu(self.linear_layer(h_j_dec))
-        #print(m_j.size())
-        #print(v_in_prime.size())
         v_j_filt_prime = m_j.mul(v_in_prime)
 
         return v_j_filt_prime

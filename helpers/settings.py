@@ -31,11 +31,15 @@ _debug_suffix = '_debug' if debug else ''
 
 # Paths
 _dataset_parent_dir = 'dataset'
+# _dataset_parent_dir = 'dataset_MUSDB' # If you have the MUSDB dataset in the same format you can use this.
+# Recommended way to use the MUSDB dataset is to create a custom dataloader using the musdb functions
+
 _outputs_path = 'outputs'
 _states_path = os.path.join(_outputs_path, 'states')
 _metrics_path = os.path.join(_outputs_path, 'metrics')
 _audio_files_path = os.path.join(_outputs_path, 'audio_files')
 
+_audio_files_path = os.path.join(_audio_files_path, '{model}')
 dataset_paths = {
     'mixtures': os.path.join(_dataset_parent_dir, 'Mixtures'),
     'sources': os.path.join(_dataset_parent_dir, 'Sources')
@@ -81,11 +85,12 @@ training_output_string = 'Epoch: {ep:3d} Losses: -- ' \
                          #'Twin:{l_tw:7.4f} | Twin reg.:{l_twin:7.4f} | ' \
 
 testing_output_string_per_example = 'Example: {e:2d}, Median -- ' \
-                                    'SDR:{sdr:6.2f} dB | SIR:{sir:6.2f} dB | ' \
+                                    'SDR:{sdr:6.2f} dB | SIR:{sir:6.2f} dB | SAR:{sar:6.2f} dB |' \
                                     'Time:{t:6.2f} sec(s)'
 
 testing_output_string_all = 'Median SDR:{sdr:6.2f} dB | ' \
                             'Median SIR:{sir:6.2f} dB | ' \
+                            'Median SAR:{sar:6.2f} dB | ' \
                             'Total time:{t:7.2f} sec(s)'
 
 usage_output_string_per_example = '-- File {f} processed. Time: {t:6.2f} sec(s)'
@@ -93,9 +98,9 @@ usage_output_string_total = '-- All files processed. Total time: {t:6.2f} sec(s)
 
 # Process constants
 training_constants = {
-    'epochs': 1 if debug else 1,
-    'batch_size': 16,
-    'files_per_pass': 1
+    'epochs': 100 if debug else 1,
+    'batch_size': 8,
+    'files_per_pass': 32
 }
 
 wav_quality = {'sampling_rate': 44100, 'nb_bits': 16}
@@ -114,7 +119,9 @@ hyper_parameters = {
     'lambda_l_twin': .5,
     'lambda_1': 1e-2,
     'lambda_2': 1e-4,
-    'latent_n': 3
+    'latent_n': 1,
+    'cnn_features': 2,
+    'cnn_dropout': 0.1
 }
 hyper_parameters.update({
     'rnn_enc_output_dim': 2 * hyper_parameters['reduced_dim']

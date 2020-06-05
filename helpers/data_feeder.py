@@ -13,18 +13,18 @@ from numpy.lib import stride_tricks
 from scipy import signal
 
 from helpers.audio_io import wav_read, wav_write
-from helpers.settings import dataset_paths, output_audio_paths, wav_quality
+from helpers.settings import dataset_paths, output_audio_paths, wav_quality, _audio_files_path
 from helpers.signal_transforms import stft, i_stft, ideal_ratio_masking
 
 __author__ = ['Konstantinos Drossos -- TUT', 'Stylianos Mimilakis -- Fraunhofer IDMT']
 __docformat__ = 'reStructuredText'
 __all__ = ['data_feeder_training', 'data_feeder_testing', 'data_process_results_testing']
 
-_get_me_the_metrics = itemgetter(0, 2)
+_get_me_the_metrics = itemgetter(0, 2,3)
 
 
 def data_feeder_training(window_size, fft_size, hop_size, seq_length, context_length,
-                         batch_size, files_per_pass, debug):
+                         batch_size, files_per_pass, debug, valid=None):
     """Provides an iterator over the training examples.
 
     :param window_size: The window size to be used for the time-frequency transformation.
@@ -53,6 +53,9 @@ def data_feeder_training(window_size, fft_size, hop_size, seq_length, context_le
     """
     mixtures_list, sources_list = _get_files_lists('training')
     hamming_window = signal.hamming(window_size, True)
+    if valid:
+        mixtures_list, sources_list = _get_files_lists('validation')
+        files_per_pass = 2
 
     def epoch_it():
         for index in range(int(len(mixtures_list) / files_per_pass)):
@@ -115,6 +118,9 @@ def data_feeder_testing(window_size, fft_size, hop_size, seq_length, context_len
     if sources_list is None:
         usage_case = False
         sources_list = _get_files_lists('testing')[-1]
+    elif sources_list == 'Valid':
+        usage_case = False
+        sources_list = _get_files_lists('validation')[-1]
     else:
         usage_case = True
     hamming_window = signal.hamming(window_size, True)
@@ -122,6 +128,7 @@ def data_feeder_testing(window_size, fft_size, hop_size, seq_length, context_len
     def testing_it():
 
         for index in range(len(sources_list)):
+
             yield _get_data_testing(
                 sources_parent_path=sources_list[index],
                 window_values=hamming_window, fft_size=fft_size, hop=hop_size,
@@ -137,7 +144,7 @@ def data_feeder_testing(window_size, fft_size, hop_size, seq_length, context_len
 
 def data_process_results_testing(index, voice_true, bg_true, voice_predicted,
                                  window_size, mix, mix_magnitude, mix_phase, hop,
-                                 context_length, output_file_name=None):
+                                 context_length, outputPath,output_file_name=None, ):
     """Calculates SDR and SIR and creates the resulting audio files.
 
     :param index: The index of the current source/track.
@@ -189,16 +196,17 @@ def data_process_results_testing(index, voice_true, bg_true, voice_predicted,
 
     # Background music estimation
     bg_hat = mix[:min_len] - voice_hat[:min_len]
-
+    Path(_audio_files_path.format(model=outputPath)).mkdir(parents=True, exist_ok=True)
+    # Path(output_audio_paths['mix'].format(model=outputPath, p=example_index))
     if output_file_name is None:
-        voice_hat_path = Path(output_audio_paths['voice_predicted'].format(p=example_index))
-        bg_hat_path = Path(output_audio_paths['bg_predicted'].format(p=example_index))
-        wav_write(voice_true, file_name=Path(output_audio_paths['voice_true'].format(p=example_index)), **wav_quality)
-        wav_write(bg_true, file_name=Path(output_audio_paths['bg_true'].format(p=example_index)), **wav_quality)
-        wav_write(mix, file_name=Path(output_audio_paths['mix'].format(p=example_index)), **wav_quality)
+        voice_hat_path = Path(output_audio_paths['voice_predicted'].format(model=outputPath, p=example_index))
+        bg_hat_path = Path(output_audio_paths['bg_predicted'].format(model=outputPath,p=example_index))
+        wav_write(voice_true, file_name=Path(output_audio_paths['voice_true'].format(model=outputPath,p=example_index)), **wav_quality)
+        wav_write(bg_true, file_name=Path(output_audio_paths['bg_true'].format(model=outputPath,p=example_index)), **wav_quality)
+        wav_write(mix, file_name=Path(output_audio_paths['mix'].format(model=outputPath,p=example_index)), **wav_quality)
 
         # Metrics calculation
-        sdr, sir = _get_me_the_metrics(bss_eval.bss_eval_images_framewise(
+        sdr, sir, sar = _get_me_the_metrics(bss_eval.bss_eval_images_framewise(
             [voice_true[:min_len], bg_true[:min_len]],
             [voice_hat[:min_len], bg_hat[:min_len]]
         ))
@@ -206,14 +214,14 @@ def data_process_results_testing(index, voice_true, bg_true, voice_predicted,
     else:
         voice_hat_path = output_file_name[0]
         bg_hat_path = output_file_name[1]
-
         sdr = None
         sir = None
+        sar = None
 
     wav_write(voice_hat, file_name=voice_hat_path, **wav_quality)
     wav_write(bg_hat, file_name=bg_hat_path, **wav_quality)
-
-    return sdr, sir
+    # quit("Datafeeder line 222ish")
+    return sdr, sir, sar
 
 
 def _get_files_lists(subset):
@@ -227,6 +235,8 @@ def _get_files_lists(subset):
     mixtures_dir = Path(dataset_paths['mixtures'])
     sources_dir = Path(dataset_paths['sources'])
     specific_dir = 'Dev' if subset == 'training' else 'Test'
+    if subset == "validation":
+        specific_dir = 'Validation'
 
     mixtures_dir = mixtures_dir.joinpath(specific_dir)
     sources_dir = sources_dir.joinpath(specific_dir)

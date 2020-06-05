@@ -9,8 +9,6 @@ from collections import namedtuple
 from torch.nn import Module
 
 from modules.mad import MaDConv
-from modules._twin_net import TwinNet
-from modules._affine_transform import AffineTransform
 
 __author__ = 'Konstantinos Drossos -- Tampere University'
 __docformat__ = 'reStructuredText'
@@ -20,18 +18,21 @@ __docformat__ = 'reStructuredText'
 class MaDTwinNet_conv(Module):
 
     def __init__(self,cnn_channels, inner_kernel_size, inner_padding,
-                 cnn_dropout, 
-                 rnn_dec_input_dim,
-                 original_input_dim, context_length, latent_n=3):
+                 cnn_dropout,
+                 original_input_dim, context_length, latent_n=3, residual=False):
         """The MaD TwinNet as a module.
 
         This class implements the MaD TwinNet as a module\
         and it is based on the separate modules of MaD and\
         TwinNet.
-
-        :param rnn_enc_input_dim: The input dimensionality of\
-                                  the RNN encoder.
-        :type rnn_enc_input_dim: int
+        :param cnn_channels: The amount of CNN channels used in the blocks
+        :type cnn_channels: int
+        :param inner_kernel_size: Size of the kernel used for the inner convolution
+        :type inner_kernel_size int
+        :param inner_padding: Padding size for the inner convolution
+        :type inner_padding: int
+        :param cnn_dropout: Dropout rate for the convolutions
+        :type cnn_dropout: float
         :param rnn_dec_input_dim: The input dimensionality of\
                                   the RNN decoder.
         :type rnn_dec_input_dim: int
@@ -48,31 +49,19 @@ class MaDTwinNet_conv(Module):
             inner_kernel_size=inner_kernel_size,
             inner_padding=inner_padding,
             cnn_dropout=cnn_dropout,
-            rnn_dec_input_dim=rnn_dec_input_dim,
             context_length=context_length,
             original_input_dim=original_input_dim,
-            latent_n=latent_n
+            latent_n=latent_n,
+            residual=residual
         )
 
-        # self.twin_net = TwinNet(
-        #     rnn_dec_input_dim=rnn_dec_input_dim,
-        #     original_input_dim=original_input_dim,
-        #     context_length=context_length
-        # )
-        #
-        # self.affine = AffineTransform(
-        #     input_dim=rnn_dec_input_dim
-        # )
 
         self.output = namedtuple(
             'mad_twin_net_output',
             [
                 'v_j_filt_prime',
                 'v_j_filt'
-                # ,
-                # 'v_j_filt_prime_twin',
-                # 'affine_output',
-                # 'h_dec_twin'
+
             ]
         )
 
@@ -85,23 +74,12 @@ class MaDTwinNet_conv(Module):
                  fields of the named tuple are:
                    - `v_j_filt_prime`, the output of the Masker
                    - `v_j_filt`, the output of the Denoiser
-                   - `v_j_filt_prime_twin`, the output of the\
-                     TwinNet FNN
-                   - `affine_output`, the output of the affine\
-                     transform for the TwinNet regularization
-                   - `h_dec_twin`, the output of the RNN of the\
-                     TwinNet
-        :rtype: collections.namedtuple[torch.Tensor, torch.Tensor\
-                torch.Tensor, torch.Tensor, torch.Tensor]
+
+        :rtype: collections.namedtuple[torch.Tensor, torch.Tensor]
         """
         # Masker pass
         mad_out = self.mad(x)
 
-        # TwinNet pass
-        #twin_net_out = self.twin_net(mad_out.h_enc, x)
-
-        # Twin net regularization
-        #affine = self.affine(mad_out.h_dec)
 
         return self.output(
             mad_out.v_j_filt_prime,

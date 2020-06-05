@@ -12,21 +12,35 @@ from torch import optim, nn, save
 import torch
 from helpers import data_feeder, printing
 from helpers.settings import debug, hyper_parameters, training_constants, \
-    training_output_string, output_states_path
+    training_output_string, output_states_path, _dataset_parent_dir
 from modules.madtwinnet_conv import MaDTwinNet_conv
-from objectives import kullback_leibler as kl, l2_loss, sparsity_penalty, l2_reg_squared
+from objectives import kullback_leibler as kl
+import argparse
 
-__author__ = ['Konstantinos Drossos -- TAU', 'Stylianos Mimilakis -- Fraunhofer IDMT']
+__author__ = ['Pyry Pyykkönen -- Tampere University', 'Konstantinos Drossos -- TAU', 'Stylianos Mimilakis -- Fraunhofer IDMT']
 __docformat__ = 'reStructuredText'
 __all__ = ['training_process']
-# import cProfile, pstats
-# from io import StringIO
-# pr = cProfile.Profile()
-# pr.enable()
 
-def _one_epoch(module, epoch_it, solver, separation_loss, twin_reg_loss,
-               reg_fnn_masker, reg_fnn_dec, device, epoch_index, lambda_l_twin,
-               lambda_1, lambda_2, max_grad_norm, lats):
+parser = argparse.ArgumentParser(description='Train CNN madtwin')
+
+parser.add_argument('--layers', dest='layers',
+                    help='amount of layers between encoder and decoder',
+                    default=5, type=int)
+parser.add_argument('--feats', dest='feats',
+                    help='Amount of CNN channels',
+                    default=64, type=int)
+
+parser.add_argument('--do', dest='do',
+                    help='dropout, give in percentages',
+                    default=10, type=float)
+parser.add_argument('--residual', dest='residual',
+                    help='Use residuals in latent layers or no',
+                    action='store_true', default=False)
+
+args = parser.parse_args()
+
+
+def _one_epoch(module, epoch_it, solver, separation_loss,epoch_index, device, max_grad_norm,  lats):
     """One training epoch for MaD TwinNet.
 
     :param module: The module of MaD TwinNet.
@@ -38,32 +52,13 @@ def _one_epoch(module, epoch_it, solver, separation_loss, twin_reg_loss,
     :param separation_loss: The loss function used for\
                             the source separation.
     :type separation_loss: callable
-    :param twin_reg_loss: The loss function used for the\
-                          TwinNet regularization.
-    :type twin_reg_loss: callable
-    :param reg_fnn_masker: The weight regularization function\
-                           for the FNN of the Masker.
-    :type reg_fnn_masker: callable
-    :param reg_fnn_dec: The weight regularization function\
-                        for the FNN of the Denoiser.
-    :type reg_fnn_dec: callable
-    :param device: The device to be used.
-    :type device: str
-    :param epoch_index: The current epoch.
-    :type epoch_index: int
-    :param lambda_l_twin: The weight for the TwinNet loss.
-    :type lambda_l_twin: float
-    :param lambda_1: The weight for the `reg_fnn_masker`.
-    :type lambda_1: float
-    :param lambda_2: The weight for the `reg_fnn_dec`.
-    :type lambda_2: float
     :param max_grad_norm: The maximum gradient norm for\
                           gradient norm clipping.
     :type max_grad_norm: float
+    :param lats: Amount of layers between encoder and decoder.
+    :type lats: ints
     """
-    def _training_iteration(_m, _data, _device, _solver, _sep_l, _reg_twin,
-                            _reg_m, _reg_d, _lambda_l_twin, _lambda_1,
-                            _lambda_2, _max_grad_norm):
+    def _training_iteration(_m, _data, _device, _solver, _sep_l, _max_grad_norm):
         """One training iteration for the MaD TwinNet.
 
         :param _m: The module of MaD TwinNet.
@@ -77,21 +72,7 @@ def _one_epoch(module, epoch_it, solver, separation_loss, twin_reg_loss,
         :param _sep_l: The loss function used for the\
                        source separation.
         :type _sep_l: callable
-        :param _reg_twin: The loss function used for the\
-                          TwinNet regularization.
-        :type _reg_twin: callable
-        :param _reg_m: The weight regularization function\
-                       for the FNN of the Masker.
-        :type _reg_m: callable
-        :param _reg_d: The weight regularization function\
-                       for the FNN of the Denoiser.
-        :type _reg_d: callable
-        :param _lambda_l_twin: The weight for the TwinNet loss.
-        :type _lambda_l_twin: float
-        :param _lambda_1: The weight for the `_reg_m`.
-        :type _lambda_1: float
-        :param _lambda_2: The weight for the `_reg_d`.
-        :type _lambda_2: float
+
         :param _max_grad_norm: The maximum gradient norm for\
                                gradient norm clipping.
         :type _max_grad_norm: float
@@ -109,14 +90,9 @@ def _one_epoch(module, epoch_it, solver, separation_loss, twin_reg_loss,
         l_m = _sep_l(output.v_j_filt_prime, v_j)
         l_d = _sep_l(output.v_j_filt, v_j)
 
-        # l_tw = _sep_l(output.v_j_filt_prime_twin, v_j).mul(_lambda_l_twin)
-        # l_twin = _reg_twin(output.affine_output, output.h_dec_twin.detach())
-
-        # w_reg_masker = _reg_m(_m.mad.masker.fnn.linear_layer.weight).mul(_lambda_1)
-        # w_reg_denoiser = _reg_d(_m.mad.denoiser.fnn_dec.weight).mul(_lambda_2)
 
         # Make MaD TwinNet objective
-        loss = l_m.add(l_d)#.add(l_tw)#.add(l_twin).add(w_reg_masker).add(w_reg_denoiser)
+        loss = l_m.add(l_d)
 
         # Clear previous gradients
         _solver.zero_grad()
@@ -130,16 +106,14 @@ def _one_epoch(module, epoch_it, solver, separation_loss, twin_reg_loss,
         # Optimize
         _solver.step()
 
-        return [l_m.item(), l_d.item()]#, l_tw.item(), l_twin.item()]
+        return [l_m.item(), l_d.item()]
 
     # Log starting time
     time_start = time.time()
 
     # Do iteration over all batches
     iter_results = [
-        _training_iteration(module, data, device, solver, separation_loss,
-                            twin_reg_loss, reg_fnn_masker, reg_fnn_dec,
-                            lambda_l_twin, lambda_1, lambda_2, max_grad_norm)
+        _training_iteration(module, data, device, solver, separation_loss, max_grad_norm)
         for data in epoch_it()
     ]
 
@@ -147,16 +121,37 @@ def _one_epoch(module, epoch_it, solver, separation_loss, twin_reg_loss,
     time_end = time.time()
     # Print to stdout
     if epoch_index % 10 == 0 and epoch_index > 1:
-        save(module.mad.state_dict(), output_states_path['mad'] + str(lats) + str(epoch_index) )
+        # save model every 10 epochs
+        save(module.mad.state_dict(), output_states_path['mad'] + str(lats) +  "latents" + str(args.feats)
+             +"features"+str(args.do/100) + "dropout" + ("res" if args.residual else "") + str(epoch_index) + "epochs" + _dataset_parent_dir[7:])
+        # print("Validation time!")
+        # for _data in valid_it():
+        #     v_in, v_j = [from_numpy(_d).to(device) for _d in _data]
+        #
+        #     # Forward pass of the module
+        #     output = module(v_in.unsqueeze(1))  ## add 1 channel dim
+        #     l_m = separation_loss(output.v_j_filt_prime, v_j).item()
+        #     l_d = separation_loss(output.v_j_filt, v_j).item()
+        #     iter_results = [[l_m, l_d]]
+        #     printing.print_msg(training_output_string.format(
+        #         ep=epoch_index,
+        #         t=time_end - time_start,
+        #         **{k: v for k, v in zip(['l_m', 'l_d'],
+        #                                 [sum(i) / len(iter_results)
+        #                                  for i in zip(*iter_results)])
+        #            }
+        #     ))
+        #     break
+    else:
+        printing.print_msg(training_output_string.format(
+            ep=epoch_index,
+            t=time_end - time_start,
+            **{k: v for k, v in zip(['l_m', 'l_d'],
+                                    [sum(i)/len(iter_results)
+                                     for i in zip(*iter_results)])
+               }
+        ))
 
-    printing.print_msg(training_output_string.format(
-        ep=epoch_index,
-        t=time_end - time_start,
-        **{k: v for k, v in zip(['l_m', 'l_d'],
-                                [sum(i)/len(iter_results)
-                                 for i in zip(*iter_results)])
-           }
-    ))
 
 
 def training_process():
@@ -172,14 +167,14 @@ def training_process():
     # Set up MaD TwinNet
     with printing.InformAboutProcess('Setting up MaD TwinNet'):
         mad_twin_net = MaDTwinNet_conv(
-            cnn_channels=64,
-            inner_kernel_size=3,
-            inner_padding=1,
-            cnn_dropout=0.1,
-            rnn_dec_input_dim=hyper_parameters['rnn_enc_output_dim'],
+            cnn_channels=args.feats,
+            inner_kernel_size=1,
+            inner_padding=0,
+            cnn_dropout=args.do/100,
             original_input_dim=hyper_parameters['original_input_dim'],
             context_length=hyper_parameters['context_length'],
-            latent_n=hyper_parameters['latent_n']
+            latent_n=args.layers,
+            residual=args.residual
         ).to(device)
 
     # Get the optimizer
@@ -197,43 +192,45 @@ def training_process():
             hop_size=hyper_parameters['hop_size'],
             seq_length=hyper_parameters['seq_length'],
             context_length=hyper_parameters['context_length'],
-            batch_size=training_constants['batch_size'],
+            batch_size=4,#training_constants['batch_size'],
             files_per_pass=training_constants['files_per_pass'],
             debug=debug
         )
-    lats = hyper_parameters['latent_n']
+        valid_it = []
+        # data_feeder.data_feeder_training(
+        #     window_size=hyper_parameters['window_size'],
+        #     fft_size=hyper_parameters['fft_size'],
+        #     hop_size=hyper_parameters['hop_size'],
+        #     seq_length=hyper_parameters['seq_length'],
+        #     context_length=hyper_parameters['context_length'],
+        #     batch_size=1,files_per_pass=2, debug=debug, valid=True)
+    lats = args.layers
     print("Using " + str(lats) + " latent layers between encoder and decoder.", flush=True)
-    # Inform about the future
+    print("Using " + str(args.feats) + " cnn channels.", flush=True)
+    print("Using " + str(args.do/100) + " dropout.", flush=True)
+    print("Using dataset from folder: " + str(_dataset_parent_dir))
+    print(("Using residual connections" if args.residual else "Not using residual connections"))
+
+    print("Number of parameters: ",sum(p.numel() for p in mad_twin_net.parameters() if p.requires_grad))
+
+
     printing.print_msg('Training starts', end='\n\n')
 
-    # Auxiliary function for aesthetics
     one_epoch = partial(
         _one_epoch, module=mad_twin_net,
         epoch_it=epoch_it, solver=optimizer,
-        separation_loss=kl, twin_reg_loss=l2_loss,
-        reg_fnn_masker=sparsity_penalty,
-        reg_fnn_dec=l2_reg_squared, device=device,
-        lambda_l_twin=hyper_parameters['lambda_l_twin'],
-        lambda_1=hyper_parameters['lambda_1'],
-        lambda_2=hyper_parameters['lambda_2'],
-        max_grad_norm=hyper_parameters['max_grad_norm'],
-        lats=lats
-    )
+        separation_loss=kl, device=device, max_grad_norm=hyper_parameters['max_grad_norm'],
+        lats=lats)
 
-    # Training
-    [one_epoch(epoch_index=e) for e in range(training_constants['epochs'])]
-    # pr.disable()
-    # s = StringIO.StringIO()
-    # sortby = 'cumulative'
-    # ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-    # ps.print_stats()
-    # print(s.getvalue())
-    # # Inform about the past
+    # Training fixed epoch size
+    [one_epoch(epoch_index=e) for e in range(100)]
+
     printing.print_msg('Training done.', start='\n-- ')
 
     # Save the model
     with printing.InformAboutProcess('Saving model'):
-        save(mad_twin_net.mad.state_dict(), output_states_path['mad'] + str(lats) )
+        save(mad_twin_net.mad.state_dict(), output_states_path['mad'] + str(lats) \
+             + "latents" + str(args.feats)+"features"+str(args.do/100)+"dropout" + ("res" if args.residual else "") + _dataset_parent_dir[7:])
 
     # Say goodbye!
     printing.print_msg('That\'s all folks!')
