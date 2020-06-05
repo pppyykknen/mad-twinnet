@@ -70,7 +70,7 @@ output_audio_paths = {
 
 metrics_paths = {
     'sdr': os.path.join(_metrics_path, 'sdr{}_p2.pckl'.format(_debug_suffix)),
-    'sir': os.path.join(_metrics_path, 'sir{}_p2.pckl'.format(_debug_suffix))
+    'sir': os.path.join(_metrics_path, 'sir{}_p2.pckl'.format(_debug_suffix)),
     'sar': os.path.join(_metrics_path, 'sar{}_p2.pckl'.format(_debug_suffix))
 
 }
