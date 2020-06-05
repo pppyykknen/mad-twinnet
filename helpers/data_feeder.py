@@ -118,9 +118,9 @@ def data_feeder_testing(window_size, fft_size, hop_size, seq_length, context_len
     if sources_list is None:
         usage_case = False
         sources_list = _get_files_lists('testing')[-1]
-    elif sources_list == 'Valid':
-        usage_case = False
-        sources_list = _get_files_lists('validation')[-1]
+    #elif sources_list == 'Valid':
+    #    usage_case = False
+    #    sources_list = _get_files_lists('validation')[-1]
     else:
         usage_case = True
     hamming_window = signal.hamming(window_size, True)
@@ -144,7 +144,7 @@ def data_feeder_testing(window_size, fft_size, hop_size, seq_length, context_len
 
 def data_process_results_testing(index, voice_true, bg_true, voice_predicted,
                                  window_size, mix, mix_magnitude, mix_phase, hop,
-                                 context_length, outputPath,output_file_name=None, ):
+                                 context_length, outputPath,output_file_name=None ):
     """Calculates SDR and SIR and creates the resulting audio files.
 
     :param index: The index of the current source/track.
@@ -220,7 +220,6 @@ def data_process_results_testing(index, voice_true, bg_true, voice_predicted,
 
     wav_write(voice_hat, file_name=voice_hat_path, **wav_quality)
     wav_write(bg_hat, file_name=bg_hat_path, **wav_quality)
-    # quit("Datafeeder line 222ish")
     return sdr, sir, sar
 
 
@@ -235,8 +234,6 @@ def _get_files_lists(subset):
     mixtures_dir = Path(dataset_paths['mixtures'])
     sources_dir = Path(dataset_paths['sources'])
     specific_dir = 'Dev' if subset == 'training' else 'Test'
-    if subset == "validation":
-        specific_dir = 'Validation'
 
     mixtures_dir = mixtures_dir.joinpath(specific_dir)
     sources_dir = sources_dir.joinpath(specific_dir)
@@ -366,10 +363,7 @@ def _get_data_training(current_set, set_size, mixtures_list, sources_list,
             ms_train = ms_seg
             vs_train = vs_seg
 
-            # ms_train = np.zeros((len(m_list), ms_.size()))
-            #
-            # vs_train = np.zeros((len(m_list),vs_seg.size()))
-            #
+
         else:
             ms_train = np.vstack((ms_train, ms_seg))
             vs_train = np.vstack((vs_train, vs_seg))
