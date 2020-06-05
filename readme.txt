@@ -11,4 +11,5 @@ For example: python ./scripts/training.py --layers 5 --channels 64
 
 5.1 Alternatively if using an IDE, one can manually change the default parser settings in training.py to the desired hyperparameters. 
  
-
+6. For testing, use 
+python ./scripts/testing.py --layers $layers --channels $channels 

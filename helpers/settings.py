@@ -71,6 +71,8 @@ output_audio_paths = {
 metrics_paths = {
     'sdr': os.path.join(_metrics_path, 'sdr{}_p2.pckl'.format(_debug_suffix)),
     'sir': os.path.join(_metrics_path, 'sir{}_p2.pckl'.format(_debug_suffix))
+    'sar': os.path.join(_metrics_path, 'sar{}_p2.pckl'.format(_debug_suffix))
+
 }
 
 output_states_path = {
@@ -100,7 +102,7 @@ usage_output_string_total = '-- All files processed. Total time: {t:6.2f} sec(s)
 training_constants = {
     'epochs': 100 if debug else 1,
     'batch_size': 8,
-    'files_per_pass': 32
+    'files_per_pass': 16
 }
 
 wav_quality = {'sampling_rate': 44100, 'nb_bits': 16}

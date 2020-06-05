@@ -3,7 +3,6 @@
 
 """Training process module.
 """
-
 import time
 from functools import partial
 
@@ -35,7 +34,7 @@ parser.add_argument('--do', dest='do',
                     default=10, type=float)
 parser.add_argument('--residual', dest='residual',
                     help='Use residuals in latent layers or no',
-                    action='store_true', default=True)
+                    action='store_true', default=False)
 
 args = parser.parse_args()
 

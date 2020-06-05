@@ -193,6 +193,8 @@ def testing_process():
             pickle.dump(sdr, f, protocol=2)
         with open(metrics_paths['sir'], 'wb') as f:
             pickle.dump(sir, f, protocol=2)
+        with open(metrics_paths['sar'], 'wb') as f:
+            pickle.dump(sar, f, protocol=2)
     print("Using " + str(lats) + " latent layers between encoder and decoder.", flush=True)
     print("Using " + str(args.channels) + " cnn channels.", flush=True)
     print("Using " + str(args.do / 100) + " dropout.", flush=True)
