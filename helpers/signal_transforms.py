@@ -185,7 +185,7 @@ def _dft(x, windowing_func, fft_size):
     fft_buffer[:hw_1] = win_x[hw_2:]
     fft_buffer[-hw_2:] = win_x[:hw_2]
 
-    x = fftpack.fft(fft_buffer)
+    x = np.fft.fft(fft_buffer)
 
     magn_x = (np.abs(x[:half_n]))
     phase_x = (np.angle(x[:half_n]))

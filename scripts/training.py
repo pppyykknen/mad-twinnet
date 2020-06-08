@@ -163,6 +163,7 @@ def training_process():
     printing.print_intro_messages(device)
     printing.print_msg('Starting training process. Debug mode: {}'.format(debug))
     torch.backends.cudnn.benchmark = True
+    #torch.backends.cudnn.enabled = True
     # Set up MaD TwinNet
     with printing.InformAboutProcess('Setting up MaD TwinNet'):
         mad_twin_net = MaDTwinNet_conv(
@@ -228,7 +229,7 @@ def training_process():
 
     # Save the model
     with printing.InformAboutProcess('Saving model'):
-        save(mad_twin_net.mad.state_dict(),"./outputs/states/" + str(lats) + str(args.feats)+str(int(args.do))+("res" if args.residual else "")+".pt"+ _dataset_parent_dir[7:])
+        save(mad_twin_net.mad.state_dict(),"./outputs/states/" + str(lats) + str(args.channels)+str(int(args.do))+("res" if args.residual else "")+".pt"+ _dataset_parent_dir[7:])
 
     # Say goodbye!
     printing.print_msg('That\'s all folks!')

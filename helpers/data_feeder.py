@@ -23,7 +23,8 @@ __all__ = ['data_feeder_training', 'data_feeder_testing', 'data_process_results_
 _get_me_the_metrics = itemgetter(0, 2,3)
 
 
-def data_feeder_training(window_size, fft_size, hop_size, seq_length, context_length,
+def data_feeder_training(window_size
+                         , fft_size, hop_size, seq_length, context_length,
                          batch_size, files_per_pass, debug, valid=None):
     """Provides an iterator over the training examples.
 

@@ -28,7 +28,7 @@ parser = argparse.ArgumentParser(description='Train CNN madtwin')
 
 parser.add_argument('--layers', dest='layers',
                     help='amount of latent layers',
-                    default=1, type=int)
+                    default=5, type=int)
 parser.add_argument('--channels', dest='channels',
                     help='Amount of conv features',
                     default=64, type=int)
