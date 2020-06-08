@@ -137,6 +137,8 @@ def testing_process():
     outputPath = str(lats)+str(args.channels)+str(args.do)+("res" if args.residual else "")+ _dataset_parent_dir[7:]
     print("Output path: " + outputPath)
     pt_path = ("./outputs/states/" + str(lats) + str(args.channels)+str(int(args.do))+("res" if args.residual else "")+".pt"+ _dataset_parent_dir[7:])
+    pt_path = "./outputs/states/mad.pt" + str(lats) +  "latents" + str(args.channels) +"features"+str(args.do/100) + \
+              "dropout" + ("res" if args.residual else "") + str(90) + "epochs"
     # print("USING " + str(latent_n) + " conv layers between enc/dec")
     print("Weights path: " + pt_path, flush=True)
     # Set up MaD TwinNet
